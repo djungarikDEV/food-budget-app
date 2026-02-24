@@ -1,23 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:food_budget_app/data/budget_data.dart';
+import 'package:food_budget_app/data/app_config.dart';
 import 'package:food_budget_app/l10n/localizations.dart';
 import 'package:intl/intl.dart';
 
 class SummaryCard extends StatelessWidget {
   final AppLocalizations l;
   final NumberFormat formatter;
-  final MonthData data;
+  final MonthInfo monthInfo;
+  final AppConfig config;
+  final String memberId;
 
   const SummaryCard({
     super.key,
     required this.l,
     required this.formatter,
-    required this.data,
+    required this.monthInfo,
+    required this.config,
+    required this.memberId,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final daily = config.dailyTotal(memberId, monthInfo.month);
+    final monthly = config.monthlyTotal(memberId, monthInfo.month);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -34,17 +42,25 @@ class SummaryCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            _buildRow(context, '📅',
+            _buildRow(
+                context,
+                '\u{1F4C5}',
                 l.t('summaryWeekdays', {
-                  'count': '${data.weekdayCount}',
-                  'cost': formatter.format(data.dailyTotal),
+                  'count': '${monthInfo.weekdayCount}',
+                  'cost': config.formatPrice(daily, formatter),
                 })),
             const SizedBox(height: 12),
-            _buildRow(context, '🍽️',
-                l.t('summaryWeekends', {'name': BudgetData.fatherName})),
+            _buildRow(
+                context,
+                '\u{1F37D}\u{FE0F}',
+                l.t('summaryWeekends',
+                    {'name': BudgetData.fatherName})),
             const SizedBox(height: 12),
-            _buildRow(context, '📌',
-                l.t('weekendNote', {'name': BudgetData.fatherName})),
+            _buildRow(
+                context,
+                '\u{1F4CC}',
+                l.t('weekendNote',
+                    {'name': BudgetData.fatherName})),
             const SizedBox(height: 20),
             Container(
               width: double.infinity,
@@ -60,7 +76,7 @@ class SummaryCard extends StatelessWidget {
                           color: theme.colorScheme.onPrimaryContainer)),
                   const SizedBox(height: 4),
                   Text(
-                    '${formatter.format(data.monthlyTotal)} ${l.t('huf')}',
+                    config.formatPrice(monthly, formatter),
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onPrimaryContainer,

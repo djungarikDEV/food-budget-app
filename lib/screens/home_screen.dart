@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:food_budget_app/data/budget_data.dart';
+import 'package:food_budget_app/data/app_config.dart';
 import 'package:food_budget_app/l10n/localizations.dart';
 import 'package:food_budget_app/widgets/budget_card.dart';
 import 'package:food_budget_app/widgets/daily_breakdown_card.dart';
 import 'package:food_budget_app/widgets/summary_card.dart';
-import 'package:food_budget_app/widgets/why_card.dart';
 import 'package:food_budget_app/widgets/progress_card.dart';
 import 'package:food_budget_app/widgets/pie_chart_card.dart';
-import 'package:food_budget_app/widgets/currency_card.dart';
 import 'package:food_budget_app/widgets/share_button.dart';
-import 'package:food_budget_app/widgets/tip_card.dart';
 import 'package:food_budget_app/widgets/calorie_card.dart';
-import 'package:food_budget_app/widgets/comparison_card.dart';
 import 'package:food_budget_app/widgets/month_selector.dart';
 import 'package:food_budget_app/widgets/price_history_card.dart';
 import 'package:food_budget_app/widgets/settings_sheet.dart';
+import 'package:food_budget_app/widgets/member_selector.dart';
 import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,11 +24,14 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with TickerProviderStateMixin {
   late final AnimationController _controller;
   int _selectedMonth = 3;
+  String _selectedMemberId = 'maxim';
+  AppConfig? _config;
 
-  MonthData get _data => BudgetData.months[_selectedMonth]!;
+  MonthInfo get _monthInfo => BudgetData.months[_selectedMonth]!;
 
   @override
   void initState() {
@@ -39,6 +40,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..forward();
+    _loadConfig();
+  }
+
+  Future<void> _loadConfig() async {
+    final config = await AppConfig.load();
+    setState(() => _config = config);
+  }
+
+  void _onConfigChanged() {
+    setState(() {});
   }
 
   @override
@@ -66,42 +77,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  void _editPrice(int index) {
-    final l = AppLocalizations(widget.locale);
-    final currentPrice = _data.prices[index];
-    final controller = TextEditingController(text: '$currentPrice');
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l.t('editPrice')),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: l.t(BudgetData.priceKeys[index]),
-            suffixText: 'Ft',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l.t('cancel')),
-          ),
-          FilledButton(
-            onPressed: () {
-              final val = int.tryParse(controller.text);
-              if (val != null && val > 0) {
-                setState(() => _data.setPrice(index, val));
-              }
-              Navigator.pop(ctx);
-            },
-            child: Text(l.t('save')),
-          ),
-        ],
-      ),
-    );
+  int _getColumnCount(double width) {
+    if (width > 1200) return 4;
+    if (width > 900) return 3;
+    if (width > 600) return 2;
+    return 1;
   }
 
   @override
@@ -109,7 +89,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final l = AppLocalizations(widget.locale);
     final theme = Theme.of(context);
     final formatter = NumberFormat('#,###', 'hu');
-    final data = _data;
+
+    if (_config == null) {
+      return const Scaffold(
+          body: Center(child: CircularProgressIndicator()));
+    }
+
+    final config = _config!;
+    final monthInfo = _monthInfo;
+    final prices = config.getBasePrices(_selectedMemberId, _selectedMonth);
 
     return Scaffold(
       appBar: AppBar(
@@ -121,138 +109,225 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             tooltip: l.t('settings'),
             onPressed: () => showModalBottomSheet(
               context: context,
-              builder: (_) => const SettingsSheet(),
+              isScrollControlled: true,
+              builder: (_) => SettingsSheet(
+                config: config,
+                onConfigChanged: _onConfigChanged,
+              ),
             ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Month selector
-            _animatedCard(0, MonthSelector(
-              selectedMonth: _selectedMonth,
-              onChanged: (m) => setState(() => _selectedMonth = m),
-              l: l,
-            )),
-
-            const SizedBox(height: 12),
-
-            // Header
-            _animatedCard(1, Card(
-              color: theme.colorScheme.primaryContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Icon(Icons.restaurant_menu, size: 48,
-                        color: theme.colorScheme.onPrimaryContainer),
-                    const SizedBox(height: 8),
-                    Text(l.t('month_$_selectedMonth'),
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: theme.colorScheme.onPrimaryContainer,
-                          fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(l.t('periodFor_$_selectedMonth'),
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onPrimaryContainer)),
-                  ],
-                ),
-              ),
-            )),
-
-            const SizedBox(height: 16),
-
-            // Progress
-            _animatedCard(2, ProgressCard(l: l, formatter: formatter, data: data)),
-            const SizedBox(height: 16),
-
-            // Overview cards
-            _animatedCard(3, Row(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = _getColumnCount(constraints.maxWidth);
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: BudgetCard(
-                  icon: Icons.work,
-                  label: l.t('weekdays'),
-                  value: l.t('weekdayCount', {'count': '${data.weekdayCount}'}),
-                  color: theme.colorScheme.secondaryContainer,
-                  textColor: theme.colorScheme.onSecondaryContainer,
-                )),
-                const SizedBox(width: 12),
-                Expanded(child: BudgetCard(
-                  icon: Icons.weekend,
-                  label: l.t('weekends'),
-                  value: l.t('weekendCount', {'count': '${data.weekendCount}'}),
-                  subtitle: l.t('paidByFather', {'name': BudgetData.fatherName}),
-                  color: theme.colorScheme.tertiaryContainer,
-                  textColor: theme.colorScheme.onTertiaryContainer,
-                )),
+                // Member selector (always full width)
+                _animatedCard(
+                    0,
+                    MemberSelector(
+                      selectedMemberId: _selectedMemberId,
+                      onChanged: (id) =>
+                          setState(() => _selectedMemberId = id),
+                    )),
+                const SizedBox(height: 12),
+
+                // Month selector (always full width)
+                _animatedCard(
+                    1,
+                    MonthSelector(
+                      selectedMonth: _selectedMonth,
+                      onChanged: (m) =>
+                          setState(() => _selectedMonth = m),
+                      l: l,
+                    )),
+                const SizedBox(height: 12),
+
+                // Header (always full width)
+                _animatedCard(
+                    2,
+                    Card(
+                      color: theme.colorScheme.primaryContainer,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            Icon(Icons.restaurant_menu,
+                                size: 48,
+                                color: theme
+                                    .colorScheme.onPrimaryContainer),
+                            const SizedBox(height: 8),
+                            Text(
+                                '${BudgetData.getMember(_selectedMemberId).displayName} \u2014 ${l.t('month_$_selectedMonth')}',
+                                style: theme.textTheme.headlineMedium
+                                    ?.copyWith(
+                                  color: theme
+                                      .colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.bold,
+                                )),
+                            const SizedBox(height: 4),
+                            Text(
+                                l.t('periodFor_$_selectedMonth'),
+                                style: theme.textTheme.bodyLarge
+                                    ?.copyWith(
+                                        color: theme.colorScheme
+                                            .onPrimaryContainer)),
+                          ],
+                        ),
+                      ),
+                    )),
+                const SizedBox(height: 16),
+
+                // Grid of cards
+                _buildResponsiveGrid(columns, l, formatter, config,
+                    monthInfo, prices),
               ],
-            )),
-            const SizedBox(height: 16),
-
-            // Daily breakdown (editable)
-            _animatedCard(4, DailyBreakdownCard(
-              l: l, formatter: formatter, data: data,
-              onEditPrice: _editPrice,
-            )),
-            const SizedBox(height: 16),
-
-            // Calorie counter
-            _animatedCard(5, CalorieCard(l: l)),
-            const SizedBox(height: 16),
-
-            // Pie chart
-            _animatedCard(6, PieChartCard(l: l, data: data)),
-            const SizedBox(height: 16),
-
-            // Summary
-            _animatedCard(7, SummaryCard(l: l, formatter: formatter, data: data)),
-            const SizedBox(height: 16),
-
-            // Price comparison
-            _animatedCard(8, ComparisonCard(l: l, formatter: formatter)),
-            const SizedBox(height: 16),
-
-            // Currency
-            _animatedCard(9, CurrencyCard(l: l, formatter: formatter, data: data)),
-            const SizedBox(height: 16),
-
-            // Price history chart
-            _animatedCard(10, PriceHistoryCard(l: l, formatter: formatter)),
-            const SizedBox(height: 16),
-
-            // Why explanation
-            _animatedCard(11, WhyCard(l: l)),
-            const SizedBox(height: 16),
-
-            // Tip
-            _animatedCard(12, TipCard(l: l)),
-            const SizedBox(height: 16),
-
-            // Share
-            _animatedCard(13, ShareButton(l: l, data: data)),
-            const SizedBox(height: 16),
-
-            // Thank you
-            _animatedCard(14, Card(
-              color: theme.colorScheme.primaryContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(
-                  l.t('thankYou', {'name': BudgetData.fatherName}),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            )),
-            const SizedBox(height: 24),
-          ],
-        ),
+            ),
+          );
+        },
       ),
+    );
+  }
+
+  Widget _buildResponsiveGrid(
+    int columns,
+    AppLocalizations l,
+    NumberFormat formatter,
+    AppConfig config,
+    MonthInfo monthInfo,
+    Map<String, int> prices,
+  ) {
+    final theme = Theme.of(context);
+
+    final cards = <Widget>[
+      // Progress
+      _animatedCard(
+          3,
+          ProgressCard(
+            l: l,
+            formatter: formatter,
+            monthInfo: monthInfo,
+            config: config,
+            memberId: _selectedMemberId,
+          )),
+
+      // Overview cards (weekday/weekend)
+      _animatedCard(
+          4,
+          Row(
+            children: [
+              Expanded(
+                  child: BudgetCard(
+                icon: Icons.work,
+                label: l.t('weekdays'),
+                value: l.t('weekdayCount',
+                    {'count': '${monthInfo.weekdayCount}'}),
+                color: theme.colorScheme.secondaryContainer,
+                textColor: theme.colorScheme.onSecondaryContainer,
+              )),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: BudgetCard(
+                icon: Icons.weekend,
+                label: l.t('weekends'),
+                value: l.t('weekendCount',
+                    {'count': '${monthInfo.weekendCount}'}),
+                subtitle: l.t('paidByFather',
+                    {'name': BudgetData.fatherName}),
+                color: theme.colorScheme.tertiaryContainer,
+                textColor: theme.colorScheme.onTertiaryContainer,
+              )),
+            ],
+          )),
+
+      // Daily breakdown
+      _animatedCard(
+          5,
+          DailyBreakdownCard(
+            l: l,
+            formatter: formatter,
+            config: config,
+            memberId: _selectedMemberId,
+            month: _selectedMonth,
+            onConfigChanged: _onConfigChanged,
+          )),
+
+      // Calories
+      _animatedCard(
+          6,
+          CalorieCard(l: l, memberId: _selectedMemberId)),
+
+      // Pie chart
+      _animatedCard(
+          7, PieChartCard(l: l, prices: prices)),
+
+      // Summary
+      _animatedCard(
+          8,
+          SummaryCard(
+            l: l,
+            formatter: formatter,
+            monthInfo: monthInfo,
+            config: config,
+            memberId: _selectedMemberId,
+          )),
+
+      // Price history
+      _animatedCard(
+          9,
+          PriceHistoryCard(
+            l: l,
+            formatter: formatter,
+            config: config,
+          )),
+
+      // Share
+      _animatedCard(
+          10,
+          ShareButton(
+            l: l,
+            config: config,
+            memberId: _selectedMemberId,
+            month: _selectedMonth,
+          )),
+    ];
+
+    if (columns <= 1) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: cards
+            .expand((c) => [c, const SizedBox(height: 16)])
+            .toList(),
+      );
+    }
+
+    // Distribute cards across columns (masonry style)
+    final columnLists = List.generate(columns, (_) => <Widget>[]);
+    for (int i = 0; i < cards.length; i++) {
+      columnLists[i % columns].add(
+        Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: cards[i]),
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (int i = 0; i < columns; i++) ...[
+          if (i > 0) const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: columnLists[i],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

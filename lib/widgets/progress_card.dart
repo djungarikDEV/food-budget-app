@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:food_budget_app/data/budget_data.dart';
+import 'package:food_budget_app/data/app_config.dart';
 import 'package:food_budget_app/l10n/localizations.dart';
 import 'package:intl/intl.dart';
 
 class ProgressCard extends StatelessWidget {
   final AppLocalizations l;
   final NumberFormat formatter;
-  final MonthData data;
+  final MonthInfo monthInfo;
+  final AppConfig config;
+  final String memberId;
 
   const ProgressCard({
     super.key,
     required this.l,
     required this.formatter,
-    required this.data,
+    required this.monthInfo,
+    required this.config,
+    required this.memberId,
   });
 
   @override
@@ -20,19 +25,21 @@ class ProgressCard extends StatelessWidget {
     final theme = Theme.of(context);
     final now = DateTime.now();
     final isCurrentMonth =
-        now.year == data.year && now.month == data.month;
-    final dayOfMonth = isCurrentMonth ? now.day : data.totalDays;
+        now.year == monthInfo.year && now.month == monthInfo.month;
+    final dayOfMonth = isCurrentMonth ? now.day : monthInfo.totalDays;
 
     int weekdaysPassed = 0;
     for (int d = 1; d <= dayOfMonth; d++) {
-      final date = DateTime(data.year, data.month, d);
+      final date = DateTime(monthInfo.year, monthInfo.month, d);
       if (date.weekday <= 5) weekdaysPassed++;
     }
 
-    final spent = weekdaysPassed * data.dailyTotal;
-    final remaining = data.monthlyTotal - spent;
-    final progress = spent / data.monthlyTotal;
-    final daysLeft = data.totalDays - dayOfMonth;
+    final dailyCovered = config.coveredDailyTotal(memberId, monthInfo.month);
+    final spent = weekdaysPassed * dailyCovered;
+    final budget = config.monthlyAllowance;
+    final remaining = budget - spent;
+    final progress = spent / budget;
+    final daysLeft = monthInfo.totalDays - dayOfMonth;
 
     return Card(
       child: Padding(
@@ -57,9 +64,11 @@ class ProgressCard extends StatelessWidget {
                 minHeight: 12,
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  progress > 0.9 ? Colors.red
-                      : progress > 0.7 ? Colors.orange
-                      : theme.colorScheme.primary,
+                  progress > 0.9
+                      ? Colors.red
+                      : progress > 0.7
+                          ? Colors.orange
+                          : theme.colorScheme.primary,
                 ),
               ),
             ),
@@ -68,20 +77,29 @@ class ProgressCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _stat(context, l.t('spent'),
-                    '${formatter.format(spent)} ${l.t('huf')}', Colors.orange),
-                _stat(context, l.t('remaining'),
-                    '${formatter.format(remaining > 0 ? remaining : 0)} ${l.t('huf')}',
-                    theme.colorScheme.primary),
+                    config.formatPrice(spent, formatter), Colors.orange,
+                    CrossAxisAlignment.start),
+                _stat(
+                    context,
+                    l.t('remaining'),
+                    config.formatPrice(
+                        remaining > 0 ? remaining : 0, formatter),
+                    theme.colorScheme.primary,
+                    CrossAxisAlignment.end),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _stat(context, l.t('daysPassed'),
-                    '$dayOfMonth / ${data.totalDays}', theme.colorScheme.outline),
+                _stat(
+                    context,
+                    l.t('daysPassed'),
+                    '$dayOfMonth / ${monthInfo.totalDays}',
+                    theme.colorScheme.outline,
+                    CrossAxisAlignment.start),
                 _stat(context, l.t('daysLeft'), '$daysLeft',
-                    theme.colorScheme.outline),
+                    theme.colorScheme.outline, CrossAxisAlignment.end),
               ],
             ),
           ],
@@ -90,10 +108,11 @@ class ProgressCard extends StatelessWidget {
     );
   }
 
-  Widget _stat(BuildContext context, String label, String value, Color color) {
+  Widget _stat(BuildContext context, String label, String value, Color color,
+      CrossAxisAlignment alignment) {
     final theme = Theme.of(context);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: alignment,
       children: [
         Text(label,
             style: theme.textTheme.bodySmall

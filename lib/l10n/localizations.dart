@@ -6,8 +6,6 @@ class AppLocalizations {
 
   final String _locale;
 
-  static const String fatherName = 'István';
-
   Map<String, String> get _strings => _locale == 'hu' ? hu : en;
 
   String t(String key, [Map<String, String>? params]) {

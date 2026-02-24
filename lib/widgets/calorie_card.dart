@@ -1,42 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:food_budget_app/data/budget_data.dart';
 import 'package:food_budget_app/l10n/localizations.dart';
 
 class CalorieCard extends StatelessWidget {
   final AppLocalizations l;
+  final String memberId;
 
-  const CalorieCard({super.key, required this.l});
-
-  static const _items = [
-    _Food('🥣', 'breakfast', 350, 10.0, 7.0, 58.0),
-    _Food('🥬', 'sprouts', 30, 3.0, 0.2, 4.0),
-    _Food('🍱', 'lunch', 500, 22.0, 16.0, 55.0),
-    _Food('🍽️', 'dinner', 450, 18.0, 14.0, 50.0),
-    _Food('💪', 'proteinPacket', 120, 24.0, 1.5, 3.0),
-    _Food('🥛', 'proteinPuttyos', 150, 15.0, 5.0, 12.0),
-    _Food('🐟', 'tuna', 190, 30.0, 7.0, 0.0),
-    _Food('🍌', 'banana', 110, 1.3, 0.4, 27.0),
-    _Food('🧀', 'milk', 100, 12.0, 4.0, 3.0),
-  ];
+  const CalorieCard({super.key, required this.l, required this.memberId});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final member = BudgetData.getMember(memberId);
 
     int totalKcal = 0;
     double totalProtein = 0;
     double totalFat = 0;
     double totalCarb = 0;
-    for (final item in _items) {
-      totalKcal += item.kcal;
-      totalProtein += item.protein;
-      totalFat += item.fat;
-      totalCarb += item.carb;
+    for (final key in BudgetData.priceKeys) {
+      final n = BudgetData.nutrition[key]!;
+      totalKcal += n[0].round();
+      totalProtein += n[1];
+      totalFat += n[2];
+      totalCarb += n[3];
     }
 
-    const recommendedKcal = 2600;
-    const recommendedProtein = 65.0;
+    final recommendedKcal = member.recommendedKcal;
+    final recommendedProtein = member.recommendedProtein;
     final kcalPct = (totalKcal / recommendedKcal * 100).round();
     final proteinPct = (totalProtein / recommendedProtein * 100).round();
+    final warningPct = member.calorieWarningPct;
+
+    final String gender;
+    if (member.age < 18) {
+      gender = member.id == 'cynthia' ? l.t('girl') : l.t('boy');
+    } else {
+      gender = member.id == 'cynthia' ? l.t('woman') : l.t('man');
+    }
 
     return Card(
       child: Padding(
@@ -46,11 +46,14 @@ class CalorieCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.local_fire_department, color: theme.colorScheme.primary),
+                Icon(Icons.local_fire_department,
+                    color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
-                Text(l.t('calorieTitle'),
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Text(l.t('calorieTitle'),
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -60,29 +63,11 @@ class CalorieCard extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Per item
-            ..._items.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Text(item.emoji, style: const TextStyle(fontSize: 18)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                          child: Text(l.t(item.key),
-                              style: theme.textTheme.bodyMedium)),
-                      Text('${item.kcal} kcal',
-                          style: theme.textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 12),
-                      SizedBox(
-                        width: 50,
-                        child: Text('${item.protein.round()}g P',
-                            style: theme.textTheme.bodySmall
-                                ?.copyWith(color: Colors.blue),
-                            textAlign: TextAlign.right),
-                      ),
-                    ],
-                  ),
-                )),
+            for (final key in BudgetData.priceKeys) ...[
+              _itemRow(context, key),
+              if (key != BudgetData.priceKeys.last)
+                const SizedBox(height: 8),
+            ],
 
             const Divider(height: 24),
 
@@ -90,29 +75,95 @@ class CalorieCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _totalChip(context, '🔥', '$totalKcal', 'kcal'),
-                _totalChip(context, '💪', '${totalProtein.round()}g', l.t('protein_short')),
-                _totalChip(context, '🧈', '${totalFat.round()}g', l.t('fat_short')),
-                _totalChip(context, '🌾', '${totalCarb.round()}g', l.t('carb_short')),
+                _totalChip(context, '\u{1F525}', '$totalKcal', 'kcal'),
+                _totalChip(context, '\u{1F4AA}', '${totalProtein.round()}g',
+                    l.t('protein_short')),
+                _totalChip(context, '\u{1F9C8}', '${totalFat.round()}g',
+                    l.t('fat_short')),
+                _totalChip(context, '\u{1F33E}', '${totalCarb.round()}g',
+                    l.t('carb_short')),
               ],
             ),
 
             const SizedBox(height: 16),
 
-            // Progress bars vs recommended
-            Text(l.t('vsRecommended'),
+            Text(
+                l.t('vsRecommended', {
+                  'age': '${member.age}',
+                  'gender': gender,
+                }),
                 style: theme.textTheme.labelMedium
                     ?.copyWith(color: theme.colorScheme.outline)),
             const SizedBox(height: 8),
 
             _progressRow(context, l.t('calories_label'), kcalPct,
-                '$totalKcal / $recommendedKcal kcal'),
+                '$totalKcal / $recommendedKcal kcal', warningPct),
             const SizedBox(height: 8),
-            _progressRow(context, l.t('protein_label'), proteinPct,
-                '${totalProtein.round()} / ${recommendedProtein.round()}g'),
+            _progressRow(
+                context,
+                l.t('protein_label'),
+                proteinPct,
+                '${totalProtein.round()} / ${recommendedProtein.round()}g',
+                warningPct),
+
+            if (kcalPct < warningPct) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber,
+                        color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l.t('calorieWarning'),
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: Colors.red.shade700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _itemRow(BuildContext context, String key) {
+    final theme = Theme.of(context);
+    final n = BudgetData.nutrition[key]!;
+    final idx = BudgetData.priceKeys.indexOf(key);
+    final emoji = BudgetData.priceEmojis[idx];
+
+    return Row(
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 18)),
+        const SizedBox(width: 8),
+        Expanded(
+            child:
+                Text(l.t(key), style: theme.textTheme.bodyMedium)),
+        Text('${n[0].round()} kcal',
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 50,
+          child: Text('${n[1].round()}g P',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: Colors.blue),
+              textAlign: TextAlign.right),
+        ),
+      ],
     );
   }
 
@@ -130,12 +181,12 @@ class CalorieCard extends StatelessWidget {
     );
   }
 
-  Widget _progressRow(
-      BuildContext context, String label, int pct, String detail) {
+  Widget _progressRow(BuildContext context, String label, int pct,
+      String detail, int warningPct) {
     final theme = Theme.of(context);
     final color = pct >= 90
         ? Colors.green
-        : pct >= 70
+        : pct >= warningPct
             ? Colors.orange
             : Colors.red;
     return Column(
@@ -167,14 +218,4 @@ class CalorieCard extends StatelessWidget {
       ],
     );
   }
-}
-
-class _Food {
-  final String emoji;
-  final String key;
-  final int kcal;
-  final double protein;
-  final double fat;
-  final double carb;
-  const _Food(this.emoji, this.key, this.kcal, this.protein, this.fat, this.carb);
 }
