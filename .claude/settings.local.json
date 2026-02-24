@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter --version:*)",
+      "Bash(flutter create:*)",
+      "Bash(flutter pub add:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter build:*)",
+      "Bash(flutter emulators:*)",
+      "Bash(flutter devices:*)",
+      "Bash(flutter doctor:*)",
+      "Bash(SDK=\"H:/Unity/2023.2.14f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK\")",
+      "Bash(\"$SDK/emulator/emulator\" -list-avds)",
+      "Bash(export ANDROID_SDK_ROOT=\"$SDK\")",
+      "Bash(\"$SDK/cmdline-tools/latest/bin/avdmanager\" create avd -n food_budget_avd -k \"system-images;android-34;google_apis_playstore;x86_64\" -d pixel_6 --force)",
+      "Bash(export JAVA_HOME=\"H:/Andorid Studio/jbr\")",
+      "Bash(\"$SDK/cmdline-tools/6.0/bin/avdmanager.bat\" create avd -n food_budget_avd -k \"system-images;android-34;google_apis_playstore;x86_64\" -d pixel_6 --force)",
+      "Bash(export ANDROID_SDK_ROOT=\"H:\\\\Unity\\\\2023.2.14f1\\\\Editor\\\\Data\\\\PlaybackEngines\\\\AndroidPlayer\\\\SDK\")",
+      "Bash(export:*)",
+      "Bash(cmd.exe //c \"H:\\\\Unity\\\\2023.2.14f1\\\\Editor\\\\Data\\\\PlaybackEngines\\\\AndroidPlayer\\\\SDK\\\\cmdline-tools\\\\6.0\\\\bin\\\\avdmanager.bat create avd -n food_budget_avd -k \"\"system-images;android-34;google_apis_playstore;x86_64\"\" -d pixel_6 --force\")",
+      "Bash(cmd.exe //c \"set \"\"ANDROID_SDK_ROOT=H:\\\\Unity\\\\2023.2.14f1\\\\Editor\\\\Data\\\\PlaybackEngines\\\\AndroidPlayer\\\\SDK\"\" && set \"\"JAVA_HOME=H:\\\\Andorid Studio\\\\jbr\"\" && \"\"H:\\\\Unity\\\\2023.2.14f1\\\\Editor\\\\Data\\\\PlaybackEngines\\\\AndroidPlayer\\\\SDK\\\\cmdline-tools\\\\6.0\\\\bin\\\\avdmanager.bat\"\" create avd -n food_budget_avd -k system-images;android-34;google_apis_playstore;x86_64 --force\")",
+      "Bash(cmd.exe //c 'H:\\\\Unity\\\\2023.2.14f1\\\\Editor\\\\Data\\\\PlaybackEngines\\\\AndroidPlayer\\\\SDK\\\\cmdline-tools\\\\6.0\\\\bin\\\\avdmanager.bat create avd -n food_budget_avd -k \"\"system-images;android-34;google_apis_playstore;x86_64\"\" --force')",
+      "Bash(\"$SDK/platform-tools/adb.exe\" devices)",
+      "Bash(flutter run:*)",
+      "Bash(flutter pub remove:*)"
+    ]
+  }
+}
