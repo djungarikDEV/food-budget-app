@@ -17,8 +17,13 @@ import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   final String locale;
+  final String initialMemberId;
 
-  const HomeScreen({super.key, required this.locale});
+  const HomeScreen({
+    super.key,
+    required this.locale,
+    required this.initialMemberId,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -28,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen>
     with TickerProviderStateMixin {
   late final AnimationController _controller;
   int _selectedMonth = 3;
-  String _selectedMemberId = 'maxim';
+  late String _selectedMemberId;
   AppConfig? _config;
 
   MonthInfo get _monthInfo => BudgetData.months[_selectedMonth]!;
@@ -36,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+    _selectedMemberId = widget.initialMemberId;
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),

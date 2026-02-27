@@ -4,6 +4,7 @@ import 'package:food_budget_app/data/app_config.dart';
 import 'package:food_budget_app/screens/home_screen.dart';
 import 'package:food_budget_app/screens/splash_screen.dart';
 import 'package:food_budget_app/screens/login_screen.dart';
+import 'package:food_budget_app/screens/profile_selection_screen.dart';
 
 class FoodBudgetApp extends StatefulWidget {
   const FoodBudgetApp({super.key});
@@ -20,6 +21,8 @@ class FoodBudgetAppState extends State<FoodBudgetApp> {
   String _locale = 'hu';
   bool _showSplash = true;
   bool? _isLoggedIn;
+  String? _selectedProfile;
+  bool _profileChecked = false;
 
   ThemeMode get themeMode => _themeMode;
   String get locale => _locale;
@@ -32,7 +35,12 @@ class FoodBudgetAppState extends State<FoodBudgetApp> {
 
   Future<void> _checkLogin() async {
     final loggedIn = await AppConfig.isLoggedIn();
-    setState(() => _isLoggedIn = loggedIn);
+    final profile = await AppConfig.getSelectedProfile();
+    setState(() {
+      _isLoggedIn = loggedIn;
+      _selectedProfile = profile;
+      _profileChecked = true;
+    });
   }
 
   void setThemeMode(ThemeMode mode) {
@@ -70,7 +78,7 @@ class FoodBudgetAppState extends State<FoodBudgetApp> {
   }
 
   Widget _buildHome() {
-    if (_isLoggedIn == null) {
+    if (_isLoggedIn == null || !_profileChecked) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (_isLoggedIn == false) {
@@ -85,6 +93,11 @@ class FoodBudgetAppState extends State<FoodBudgetApp> {
       return SplashScreen(
           onDone: () => setState(() => _showSplash = false));
     }
-    return HomeScreen(locale: _locale);
+    if (_selectedProfile == null) {
+      return ProfileSelectionScreen(
+        onProfileSelected: (id) => setState(() => _selectedProfile = id),
+      );
+    }
+    return HomeScreen(locale: _locale, initialMemberId: _selectedProfile!);
   }
 }

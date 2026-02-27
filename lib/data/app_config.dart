@@ -249,6 +249,16 @@ class AppConfig {
     await prefs.setString('password', password);
   }
 
+  static Future<String?> getSelectedProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('selectedProfile');
+  }
+
+  static Future<void> saveSelectedProfile(String memberId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedProfile', memberId);
+  }
+
   Future<void> _syncToGist() async {
     if (githubToken == null || githubToken!.isEmpty) return;
     try {

@@ -1,11 +1,11 @@
 {
-    "name": "food_budget_app",
-    "short_name": "food_budget_app",
+    "name": "Havi Etkezesi Koltsegvetes",
+    "short_name": "Food Budget",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#4CAF50",
+    "description": "Havi etkezesi koltsegvetes alkalmazas",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
